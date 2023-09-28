@@ -1538,9 +1538,9 @@ main(int argc, char *argv[]) {
 	 */
 	strlcat(version,
 #if defined(NO_VERSION_DATE) || !defined(__DATE__)
-		"named version: BIND " PACKAGE_VERSION " <" PACKAGE_SRCID ">",
+		"named version: AVNBIND " PACKAGE_VERSION " <" PACKAGE_SRCID ">",
 #else
-		"named version: BIND " PACKAGE_VERSION " <" PACKAGE_SRCID
+		"named version: AVNBIND " PACKAGE_VERSION " <" PACKAGE_SRCID
 		"> (" __DATE__ ")",
 #endif
 		sizeof(version));

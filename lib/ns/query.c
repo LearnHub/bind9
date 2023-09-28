@@ -422,6 +422,9 @@ query_checkrpz(query_ctx_t *qctx, isc_result_t result);
 static isc_result_t
 query_rpzcname(query_ctx_t *qctx, dns_name_t *cname);
 
+bool query_validate_number(char* str);
+bool query_is_avnlan(query_ctx_t *qctx);
+
 static isc_result_t
 query_gotanswer(query_ctx_t *qctx, isc_result_t result);
 
@@ -2256,6 +2259,10 @@ query_addrrset(query_ctx_t *qctx, dns_name_t **namep,
 		 */
 		if (dbuf != NULL) {
 			ns_client_keepname(client, name, dbuf);
+			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
+				      NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+				      "query_addrrset -> NameLen: %d, BufLen: %d",
+				      name->length, isc_buffer_usedlength(dbuf));
 		}
 		dns_message_addname(client->message, name, section);
 		*namep = NULL;
@@ -6004,6 +6011,8 @@ query_lookup(query_ctx_t *qctx) {
 	    dns_rdataset_count(qctx->rdataset) > 0 && !STALE(qctx->rdataset))
 	{
 		/* Found non-stale usable rdataset. */
+		isc_log_write(ns_lctx,  NS_LOGCATEGORY_CLIENT, NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+			      "query_lookup -> Found non-stale usable rdataset.");
 		answer_found = true;
 	}
 
@@ -7701,6 +7710,111 @@ query_usestale(query_ctx_t *qctx, isc_result_t result) {
 	return (false);
 }
 
+bool query_validate_number(char* str) {
+  while (*str) {
+    if (!isdigit(*str)) {
+      return false;
+    }
+    str++;
+  }
+  return true;
+}
+
+bool query_is_avnlan(query_ctx_t *qctx) {
+  bool rv = false;
+  char msg[256];
+  unsigned char ipAddr[4];
+  
+  CCTRACE(ISC_LOG_DEBUG(3), "query_is_avnlan");
+  
+  size_t hostlen = qctx->client->query.qname->ndata[0];
+ 
+  // Min length = 7 (a-b-c-d), Max length 15 (aaa-bbb-ccc-ddd)
+  if (hostlen > 6 && hostlen < 16) {
+    char host[16];
+    int dashes = 0;
+    memset(host, 0, hostlen);
+    strncpy(host, qctx->client->query.qname->ndata+1, hostlen);
+    char* ptr = strtok(host, "-");
+    while (ptr) {
+      if (query_validate_number(ptr)) {
+        int num = atoi(ptr);
+        if (num >= 0 && num <= 255) {
+          ipAddr[dashes] = num;
+          ptr = strtok(NULL, "-");
+          if (NULL != ptr) {
+            dashes++;
+          }
+        } 
+      }
+    }
+    if (dashes == 3) {
+      snprintf(msg, sizeof(msg) - 1, "query_is_avnlan : ip == %d.%d.%d.%d", ipAddr[0], ipAddr[1], ipAddr[2], ipAddr[3]);
+      CCTRACE(ISC_LOG_INFO, msg);
+    }  
+  }
+
+	isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT, NS_LOGMODULE_QUERY, ISC_LOG_INFO,	
+	      "query_is_avnlan -> RDataSet record count: %d", dns_rdataset_count(qctx->rdataset));
+
+  unsigned char rdatabuf[1000] = { 0 };
+	dns_rdata_t rdata;
+ 	dns_rdata_init(&rdata);
+	rdata.length = 1000;
+	rdata.data = rdatabuf;
+	rdata.rdclass = dns_rdataclass_in;
+	rdata.type = rtype;
+
+	dns_rdatalist_t rdatalist;
+	dns_rdatalist_init(&rdatalist);
+	rdatalist.rdclass = dns_rdataclass_in;
+	rdatalist.type = rtype;
+	rdatalist.ttl = 3600;
+	ISC_LIST_APPEND(rdatalist.rdata, &rdata, link);
+
+	dns_rdataset_t rdataset;      
+	dns_rdataset_init(&rdataset);
+	dns_rdatalist_tordataset(&rdatalist, &rdataset);
+	      
+  #define BIGBUFLEN   (70 * 1024)
+	isc_buffer_t target;
+	unsigned char buf[BIGBUFLEN];
+  isc_buffer_init(&target, buf, BIGBUFLEN);
+	isc_result_t result = dns_master_rdatasettotext(dns_rootname, qctx->rdataset,
+					   &dns_master_style_debug, NULL,
+					   &target);
+  if (ISC_R_SUCCESS == result) {
+  			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
+				      NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+				      "query_is_avnlan -> RDataSet record count: %d, BufLen: %d (%s)",
+				      dns_rdataset_count(qctx->rdataset), isc_buffer_usedlength(&target), target.base);
+				      
+	      dns_rdata_t rdata = DNS_RDATA_INIT;
+	      dns_rdataset_current(qctx->rdataset, &rdata);
+  			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
+				      NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+				      "query_is_avnlan -> RData[1] length(before): %d -> (%d, %d, %d, %d)",
+				      rdata.length, rdata.data[0], rdata.data[1], rdata.data[2], rdata.data[3]);
+				      
+		    rdata.data[0] = 10;
+		    rdata.data[1] = 227;
+		    rdata.data[2] = 99;
+		    rdata.data[3] = 227;	
+
+  			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
+				      NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+				      "query_is_avnlan -> RData[1] length(before): %d -> (%d, %d, %d, %d)",
+				      rdata.length, rdata.data[0], rdata.data[1], rdata.data[2], rdata.data[3]);
+  } else {
+    			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
+				      NS_LOGMODULE_QUERY, ISC_LOG_WARNING,
+				      "query_is_avnlan -> rdatasettotext failed : error %d",
+				      result);
+  }  	
+  
+  return rv;
+}
+
 /*%
  * Continue after doing a database lookup or returning from
  * recursion, and call out to the next function depending on the
@@ -7715,16 +7829,25 @@ query_gotanswer(query_ctx_t *qctx, isc_result_t res) {
 
 	CALL_HOOK(NS_QUERY_GOT_ANSWER_BEGIN, qctx);
 
+  if (query_is_avnlan(qctx)) {
+    return (ns_query_done(qctx));
+  }
+
+  CCTRACE(ISC_LOG_DEBUG(3), "after query_is_avnlan");
+
 	if (query_checkrrl(qctx, result) != ISC_R_SUCCESS) {
 		return (ns_query_done(qctx));
 	}
 
+  CCTRACE(ISC_LOG_DEBUG(3), "after query_checkrrl");
+  
 	if (!dns_name_equal(qctx->client->query.qname, dns_rootname)) {
 		result = query_checkrpz(qctx, result);
 		if (result == ISC_R_NOTFOUND) {
 			/*
 			 * RPZ not configured for this view.
 			 */
+      CCTRACE(ISC_LOG_DEBUG(3), "after query_checkrpz - ISC_R_NOTFOUND");
 			goto root_key_sentinel;
 		}
 		if (RECURSING(qctx->client) && result == DNS_R_DISALLOWED) {
@@ -10936,6 +11059,50 @@ query_prepresponse(query_ctx_t *qctx) {
 	CCTRACE(ISC_LOG_DEBUG(3), "query_prepresponse");
 
 	CALL_HOOK(NS_QUERY_PREP_RESPONSE_BEGIN, qctx);
+
+	#define BIGBUFLEN   (70 * 1024)
+	isc_buffer_t target;
+	unsigned char buf[BIGBUFLEN];
+  isc_buffer_init(&target, buf, BIGBUFLEN);
+	result = dns_master_rdatasettotext(dns_rootname, qctx->rdataset,
+					   &dns_master_style_debug, NULL,
+					   &target);
+  if (ISC_R_SUCCESS == result) {
+	      if (NULL == qctx->rdataset->private5) {
+	        isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT, NS_LOGMODULE_QUERY, ISC_LOG_INFO,	
+	          "query_prepresponse after txtdump (private5=NULL) -> RDataSet record count: %d", dns_rdataset_count(qctx->rdataset));
+	      } else {
+	        isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT, NS_LOGMODULE_QUERY, ISC_LOG_INFO,	
+	          "query_prepresponse after txtdump (private5=VALID) -> RDataSet record count: %d", dns_rdataset_count(qctx->rdataset));
+	      }
+	      
+  			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
+				      NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+				      "query_prepresponse -> RDataSet record count: %d, BufLen: %d (%s)",
+				      dns_rdataset_count(qctx->rdataset), isc_buffer_usedlength(&target), target.base);
+				      
+	      dns_rdata_t rdata = DNS_RDATA_INIT;
+	      dns_rdataset_current(qctx->rdataset, &rdata);
+  			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
+				      NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+				      "query_prepresponse -> RData[1] length(before): %d -> (%d, %d, %d, %d)",
+				      rdata.length, rdata.data[0], rdata.data[1], rdata.data[2], rdata.data[3]);
+				      
+		    rdata.data[0] = 10;
+		    rdata.data[1] = 227;
+		    rdata.data[2] = 99;
+		    rdata.data[3] = 227;	
+
+  			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
+				      NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+				      "query_prepresponse -> RData[1] length(before): %d -> (%d, %d, %d, %d)",
+				      rdata.length, rdata.data[0], rdata.data[1], rdata.data[2], rdata.data[3]);
+  } else {
+    			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
+				      NS_LOGMODULE_QUERY, ISC_LOG_WARNING,
+				      "query_prepresponse -> rdatasettotext failed : error %d",
+				      result);
+  }  
 
 	if (WANTDNSSEC(qctx->client) &&
 	    (qctx->fname->attributes & DNS_NAMEATTR_WILDCARD) != 0)

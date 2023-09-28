@@ -3950,6 +3950,9 @@ zone_find(dns_db_t *db, const dns_name_t *name, dns_dbversion_t *version,
 	 */
 	UNUSED(now);
 
+	isc_log_write(dns_lctx, DNS_LOGCATEGORY_DATABASE, DNS_LOGMODULE_RBTDB, ISC_LOG_INFO,
+			      "zone_find -> entered...");
+
 	/*
 	 * If the caller didn't supply a version, attach to the current
 	 * version.
@@ -4403,6 +4406,8 @@ found:
 		/*
 		 * An ordinary successful query!
 		 */
+  	isc_log_write(dns_lctx, DNS_LOGCATEGORY_DATABASE, DNS_LOGMODULE_RBTDB, ISC_LOG_INFO,
+			      "zone_find -> An ordinary successful query!");
 		result = ISC_R_SUCCESS;
 	}
 
@@ -4416,6 +4421,8 @@ found:
 	}
 
 	if (type != dns_rdatatype_any) {
+  	isc_log_write(dns_lctx, DNS_LOGCATEGORY_DATABASE, DNS_LOGMODULE_RBTDB, ISC_LOG_INFO,
+			      "zone_find -> About to bind the RDataSet...");
 		bind_rdataset(search.rbtdb, node, found, 0, isc_rwlocktype_read,
 			      rdataset);
 		if (foundsig != NULL) {
