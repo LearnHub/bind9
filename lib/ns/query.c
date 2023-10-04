@@ -7751,7 +7751,7 @@ bool query_is_avnlan(query_ctx_t *qctx) {
 		
 		if (dashes == 3) {
 			snprintf(msg, sizeof(msg) - 1, "query_is_avnlan : ip == %d.%d.%d.%d", ipAddr[0], ipAddr[1], ipAddr[2], ipAddr[3]);
-			CCTRACE(ISC_LOG_INFO, msg);
+			CCTRACE(ISC_LOG_DEBUG(3), msg);
 		 
 			#define BIGBUFLEN   (70 * 1024)
 			isc_buffer_t target;
@@ -7762,14 +7762,14 @@ bool query_is_avnlan(query_ctx_t *qctx) {
 							   &target);
 			if (ISC_R_SUCCESS == result) {
 				isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
-					NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+					NS_LOGMODULE_QUERY, ISC_LOG_DEBUG(3),
 					"query_is_avnlan -> RDataSet record count: %d, BufLen: %d (%s)",
 					dns_rdataset_count(qctx->rdataset), isc_buffer_usedlength(&target), (const char*) target.base);
 
 					dns_rdata_t rdata = DNS_RDATA_INIT;
 					dns_rdataset_current(qctx->rdataset, &rdata);
 					isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
-						NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+						NS_LOGMODULE_QUERY, ISC_LOG_DEBUG(3),
 						"query_is_avnlan -> RData[1] length(before): %d -> (%d, %d, %d, %d)",
 						rdata.length, rdata.data[0], rdata.data[1], rdata.data[2], rdata.data[3]);
 
@@ -7779,7 +7779,7 @@ bool query_is_avnlan(query_ctx_t *qctx) {
 					rdata.data[3] = ipAddr[3];
 
 					isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
-						NS_LOGMODULE_QUERY, ISC_LOG_INFO,
+						NS_LOGMODULE_QUERY, ISC_LOG_DEBUG(3),
 						"query_is_avnlan -> RData[1] length(before): %d -> (%d, %d, %d, %d)",
 						rdata.length, rdata.data[0], rdata.data[1], rdata.data[2], rdata.data[3]);
 			} else {
@@ -7808,9 +7808,11 @@ query_gotanswer(query_ctx_t *qctx, isc_result_t res) {
 
 	CALL_HOOK(NS_QUERY_GOT_ANSWER_BEGIN, qctx);
 
-  if (query_is_avnlan(qctx)) {
-    return (ns_query_done(qctx));
-  }
+	// If this is a query for an IPv4 address (i.e. for an A record)
+	// then check whether it is for a dash-representation of an IPv4 address.
+	if (qctx->qtype == dns_rdatatype_a) {
+		query_is_avnlan(qctx);
+	}
 
 	if (query_checkrrl(qctx, result) != ISC_R_SUCCESS) {
 		return (ns_query_done(qctx));
