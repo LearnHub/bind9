@@ -7794,6 +7794,10 @@ bool query_is_avnlan(query_ctx_t *qctx) {
 					"query_is_avnlan -> rdatasettotext failed : error %d",
 					result);
 			}
+		} else {
+			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
+					NS_LOGMODULE_QUERY, ISC_LOG_WARNING,
+					"query_is_avnlan -> host '%s' is not an AVN dashed IP address", host);
 		}
 	}
 
