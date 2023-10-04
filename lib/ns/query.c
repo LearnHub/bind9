@@ -2259,10 +2259,6 @@ query_addrrset(query_ctx_t *qctx, dns_name_t **namep,
 		 */
 		if (dbuf != NULL) {
 			ns_client_keepname(client, name, dbuf);
-			isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
-				      NS_LOGMODULE_QUERY, ISC_LOG_INFO,
-				      "query_addrrset -> NameLen: %d, BufLen: %d",
-				      name->length, isc_buffer_usedlength(dbuf));
 		}
 		dns_message_addname(client->message, name, section);
 		*namep = NULL;
@@ -6011,8 +6007,6 @@ query_lookup(query_ctx_t *qctx) {
 	    dns_rdataset_count(qctx->rdataset) > 0 && !STALE(qctx->rdataset))
 	{
 		/* Found non-stale usable rdataset. */
-		isc_log_write(ns_lctx,  NS_LOGCATEGORY_CLIENT, NS_LOGMODULE_QUERY, ISC_LOG_INFO,
-			      "query_lookup -> Found non-stale usable rdataset.");
 		answer_found = true;
 	}
 
