@@ -7744,8 +7744,14 @@ bool query_is_avnlan(query_ctx_t *qctx) {
 					ptr = strtok(NULL, "-");
 					if (NULL != ptr) {
 						dashes++;
+					} else {
+						break;
 					}
+				} else {
+					break;
 				}
+			} else {
+				break;
 			}
 		}
 		
