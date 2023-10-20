@@ -7716,7 +7716,7 @@ bool query_validate_number(char* str) {
 
 bool query_is_avnlan(query_ctx_t *qctx) {
 	bool rv = false;
-	char msg[DNS_NAME_FORMATSIZE];
+	char msg[DNS_NAME_FORMATSIZE+50];
 	unsigned char ipAddr[4];
 
 	CCTRACE(ISC_LOG_DEBUG(3), "query_is_avnlan");
