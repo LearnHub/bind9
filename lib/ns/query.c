@@ -7716,19 +7716,26 @@ bool query_validate_number(char* str) {
 
 bool query_is_avnlan(query_ctx_t *qctx) {
 	bool rv = false;
-	char msg[256];
+	char msg[DNS_NAME_FORMATSIZE];
 	unsigned char ipAddr[4];
 
 	CCTRACE(ISC_LOG_DEBUG(3), "query_is_avnlan");
-
-	size_t hostlen = qctx->client->query.qname->ndata[0];
+	
+	char fqdn[DNS_NAME_FORMATSIZE];
+	dns_name_format(qctx->client->query.qname, fqdn, sizeof(fqdn));
+	
+	snprintf(msg, sizeof(msg) - 1, "query_is_avnlan : FQDN == %s", fqdn);
+	CCTRACE(ISC_LOG_DEBUG(3), msg);
+	
+	char strDot[] = ".";
+	size_t hostlen = strcspn(fqdn, strDot);  	
 
 	// Min length = 7 (a-b-c-d), Max length 15 (aaa-bbb-ccc-ddd)
 	if (hostlen > 6 && hostlen < 16) {
 		char host[16];
 		int dashes = 0;
-		memset(host, 0, hostlen);
-		strncpy(host, (const char*) qctx->client->query.qname->ndata+1, hostlen);
+		memset(host, 0, 16);
+		strncpy(host, fqdn, hostlen);
 		char* ptr = strtok(host, "-");
 		while (ptr) {
 			if (query_validate_number(ptr)) {
@@ -7780,7 +7787,7 @@ bool query_is_avnlan(query_ctx_t *qctx) {
 
 					isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
 						NS_LOGMODULE_QUERY, ISC_LOG_DEBUG(3),
-						"query_is_avnlan -> RData[1] length(before): %d -> (%d, %d, %d, %d)",
+						"query_is_avnlan -> RData[1] length(after): %d -> (%d, %d, %d, %d)",
 						rdata.length, rdata.data[0], rdata.data[1], rdata.data[2], rdata.data[3]);
 			} else {
 				isc_log_write(ns_lctx, NS_LOGCATEGORY_CLIENT,
