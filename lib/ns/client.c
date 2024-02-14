@@ -84,6 +84,7 @@
  * task to change the client, then the client will have to be locked.
  */
 
+#define NS_CLIENT_TRACE
 #ifdef NS_CLIENT_TRACE
 #define CTRACE(m)                                                         \
 	ns_client_log(client, NS_LOGCATEGORY_CLIENT, NS_LOGMODULE_CLIENT, \
@@ -343,6 +344,7 @@ client_allocsendbuf(ns_client_t *client, isc_buffer_t *buffer,
 	uint32_t bufsize;
 
 	REQUIRE(datap != NULL);
+	CTRACE("client_allocsendbuf");
 
 	if (TCP_CLIENT(client)) {
 		INSIST(client->tcpbuf == NULL);
@@ -378,6 +380,8 @@ client_sendpkg(ns_client_t *client, isc_buffer_t *buffer) {
 	isc_result_t result;
 	isc_region_t r;
 	dns_ttl_t min_ttl = 0;
+
+	CTRACE("client_sendpkg");
 
 	REQUIRE(client->sendhandle == NULL);
 
