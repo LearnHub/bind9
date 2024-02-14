@@ -85,7 +85,6 @@
  * task to change the client, then the client will have to be locked.
  */
 
-#define NS_CLIENT_TRACE
 #ifdef NS_CLIENT_TRACE
 #define CTRACE(m)                                                         \
 	ns_client_log(client, NS_LOGCATEGORY_CLIENT, NS_LOGMODULE_CLIENT, \
@@ -3115,7 +3114,7 @@ static bool avn_validate_number(char* str) {
 static isc_result_t
 avn_verify_response(ns_client_t *client, isc_region_t *region) {
 	ns_client_log(client, DNS_LOGCATEGORY_SECURITY,
-				      NS_LOGMODULE_CLIENT, ISC_LOG_DEBUG(3),
+				      NS_LOGMODULE_CLIENT, ISC_LOG_INFO,
 				      "avn_verify_response: Region.base=%p, Region.len=%d",
 				      region->base, region->length);
 	
@@ -3127,12 +3126,12 @@ avn_verify_response(ns_client_t *client, isc_region_t *region) {
 	uint16_t Adds = region->base[11] + (region->base[10] << 8);
 	
 	ns_client_log(client, DNS_LOGCATEGORY_SECURITY,
-				      NS_LOGMODULE_CLIENT, ISC_LOG_DEBUG(3),
+				      NS_LOGMODULE_CLIENT, ISC_LOG_INFO,
 				      "avn_verify_response: transactionId=0x%x, flags=0x%x",
 				      transactionId, flags);
 
 	ns_client_log(client, DNS_LOGCATEGORY_SECURITY,
-				      NS_LOGMODULE_CLIENT, ISC_LOG_DEBUG(3),
+				      NS_LOGMODULE_CLIENT, ISC_LOG_INFO,
 				      "avn_verify_response: Questions:%d, Answers:%d, AuthRRs:%d, AdditionalRRs:%d",
 				      Qs, As, Auths, Adds);
 
@@ -3149,7 +3148,7 @@ avn_verify_response(ns_client_t *client, isc_region_t *region) {
 				&& d[9] == 'i' && d[10] == 'n' && d[11] == 'k' && d[12] == 0) {
 			strncpy(host, p + 1, len);
 			host[len] = 0;
-			ns_client_log(client, DNS_LOGCATEGORY_SECURITY, NS_LOGMODULE_CLIENT, ISC_LOG_DEBUG(3),
+			ns_client_log(client, DNS_LOGCATEGORY_SECURITY, NS_LOGMODULE_CLIENT, ISC_LOG_INFO,
 					  "avn_verify_response: attempting to decode host '%s'", host);
 
 			int dashes = 0;
@@ -3176,20 +3175,20 @@ avn_verify_response(ns_client_t *client, isc_region_t *region) {
 			}
 
 			if (dashes == 3) {
-				ns_client_log(client, DNS_LOGCATEGORY_SECURITY, NS_LOGMODULE_CLIENT, ISC_LOG_DEBUG(3),
+				ns_client_log(client, DNS_LOGCATEGORY_SECURITY, NS_LOGMODULE_CLIENT, ISC_LOG_INFO,
 					  "avn_verify_response: decoded IP -> %d.%d.%d.%d", ipAddr[0], ipAddr[1], ipAddr[2], ipAddr[3]);
 
 				uint8_t* pResolvedIP = p + len + 1 + 13 + 4 + 12;
 
-				ns_client_log(client, DNS_LOGCATEGORY_SECURITY, NS_LOGMODULE_CLIENT, ISC_LOG_DEBUG(3),
+				ns_client_log(client, DNS_LOGCATEGORY_SECURITY, NS_LOGMODULE_CLIENT, ISC_LOG_INFO,
 					  "avn_verify_response: Current buffer content -> %d.%d.%d.%d", 
 					  pResolvedIP[0], pResolvedIP[1], pResolvedIP[2], pResolvedIP[3]);
 
 				if ( (pResolvedIP[0] != ipAddr[0]) || (pResolvedIP[1] != ipAddr[1]) ||
 					 (pResolvedIP[2] != ipAddr[2]) || (pResolvedIP[3] != ipAddr[3]) ) {
 
-					ns_client_log(client, DNS_LOGCATEGORY_SECURITY, NS_LOGMODULE_CLIENT, ISC_LOG_ERROR,
-					  "avn_verify_response: Resolved IP is WRONG!! - %d.%d.%d.%d != %d.%d.%d.%d - overwriting...", 
+					ns_client_log(client, DNS_LOGCATEGORY_SECURITY, NS_LOGMODULE_CLIENT, ISC_LOG_INFO,
+					  "avn_verify_response: %d.%d.%d.%d != %d.%d.%d.%d - overwriting...", 
 					  pResolvedIP[0], pResolvedIP[1], pResolvedIP[2], pResolvedIP[3],
 					  ipAddr[0], ipAddr[1], ipAddr[2], ipAddr[3]);
 
