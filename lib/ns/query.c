@@ -7825,9 +7825,9 @@ query_gotanswer(query_ctx_t *qctx, isc_result_t res) {
 
 	// If this is a query for an IPv4 address (i.e. for an A record)
 	// then check whether it is for a dash-representation of an IPv4 address.
-	if (qctx->qtype == dns_rdatatype_a) {
+	/*if (qctx->qtype == dns_rdatatype_a) {
 		query_is_avnlan(qctx);
-	}
+	}*/
 
 	if (query_checkrrl(qctx, result) != ISC_R_SUCCESS) {
 		return (ns_query_done(qctx));
