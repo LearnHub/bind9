@@ -8,6 +8,7 @@ lib_LTLIBRARIES = libns.la
 libns_ladir = $(includedir)/ns
 
 libns_la_HEADERS =			\
+	include/ns/avn.h		\
 	include/ns/client.h		\
 	include/ns/events.h		\
 	include/ns/hooks.h		\
@@ -25,6 +26,7 @@ libns_la_HEADERS =			\
 
 libns_la_SOURCES =		\
 	$(libns_la_HEADERS)	\
+	avn.c			\
 	client.c		\
 	hooks.c			\
 	interfacemgr.c		\
