@@ -424,7 +424,6 @@ query_rpzcname(query_ctx_t *qctx, dns_name_t *cname);
 
 bool query_validate_number(char* str);
 bool query_is_avnlan(query_ctx_t *qctx);
-static isc_mutex_t _query_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static isc_result_t
 query_gotanswer(query_ctx_t *qctx, isc_result_t result);
@@ -5529,9 +5528,6 @@ isc_result_t
 ns__query_start(query_ctx_t *qctx) {
 	isc_result_t result = ISC_R_UNSET;
 	CCTRACE(ISC_LOG_DEBUG(3), "ns__query_start");
-
-	LOCK(&_query_lock);
-
 	qctx->want_restart = false;
 	qctx->authoritative = false;
 	qctx->version = NULL;
@@ -11981,8 +11977,6 @@ ns_query_done(query_ctx_t *qctx) {
 	bool nodetach;
 
 	CCTRACE(ISC_LOG_DEBUG(3), "ns_query_done");
-
-	UNLOCK(&_query_lock);
 
 	CALL_HOOK(NS_QUERY_DONE_BEGIN, qctx);
 
