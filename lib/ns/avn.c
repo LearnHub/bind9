@@ -5,6 +5,8 @@
 #include <ns/log.h>
 #include <ns/avn.h>
 
+static isc_mutex_t _strtok_lock = PTHREAD_MUTEX_INITIALIZER;
+
 typedef struct avn_dns_response_top {
     uint16_t _transaction_id;
     uint16_t _flags;
@@ -143,7 +145,10 @@ avn_verify_response(ns_client_t *client, isc_region_t *region) {
 			char tokenHost[DNS_NAME_FORMATSIZE];
 			strncpy(tokenHost, host, len);
 			tokenHost[len] = 0;
-
+			
+			// strtok is NOT thread-safe so we need to protect dashed-IP parsing.
+			LOCK(&_strtok_lock);
+			
 			char* ptr = strtok(tokenHost, "-");
 			while (ptr) {
 				if (avn_validate_number(ptr)) {
@@ -163,6 +168,8 @@ avn_verify_response(ns_client_t *client, isc_region_t *region) {
 					break;
 				}
 			}
+
+			UNLOCK(&_strtok_lock);
 
 			if (dashes == 3) {
 				ns_client_log(client, DNS_LOGCATEGORY_SECURITY, NS_LOGMODULE_CLIENT, ISC_LOG_INFO,
@@ -184,12 +191,12 @@ avn_verify_response(ns_client_t *client, isc_region_t *region) {
 						char* start = (char*) &(pRespTail->_host_ref);
 						//avn_dump_memory(client, region->base, region->length);
 
-						char* p = start;
+						char* iterP = start;
 						uint16_t host_len = 0;
-						while (0 != *p) {
-							int8_t len = *p;
-							host_len += len + 1;
-							p = start + host_len;
+						while (0 != *iterP) {
+							int8_t rlen = *iterP;
+							host_len += rlen + 1;
+							iterP = start + host_len;
 						}
 						pIPData = ((char*) &(pRespTail->_host_ref)) + host_len + 1 + 10;
 					}
@@ -213,6 +220,7 @@ avn_verify_response(ns_client_t *client, isc_region_t *region) {
 			} else {
 				ns_client_log(client, DNS_LOGCATEGORY_SECURITY, NS_LOGMODULE_CLIENT, ISC_LOG_INFO,
 				      "avn_verify_response: bypassing response - failed to parse '%s' - found %d dashes", host, dashes);
+				avn_dump_memory(client, (unsigned char*) tokenHost, 16);
 				return ISC_R_UNEXPECTED;
 			}
 		} else {
@@ -230,3 +238,4 @@ avn_verify_response(ns_client_t *client, isc_region_t *region) {
 
 	return ISC_R_SUCCESS;
 }
+
