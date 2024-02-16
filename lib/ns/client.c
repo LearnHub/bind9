@@ -193,7 +193,7 @@ ns_client_extendederror(ns_client_t *client, uint16_t code, const char *text) {
 	}
 
 	ns_client_log(client, NS_LOGCATEGORY_CLIENT, NS_LOGMODULE_CLIENT,
-		      ISC_LOG_DEBUG(1), "set ede: info-code %u extra-text %s",
+		      ISC_LOG_DEBUG(2), "set ede: info-code %u extra-text %s",
 		      code, text == NULL ? "(null)" : text);
 
 	isc_buffer_init(&buf, ede, sizeof(ede));
